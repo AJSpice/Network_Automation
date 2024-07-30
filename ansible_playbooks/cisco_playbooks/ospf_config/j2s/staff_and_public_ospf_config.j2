@@ -1,0 +1,48 @@
+!
+ip route 0.0.0.0 0.0.0.0 {{ staff_neighbor }} 171
+
+ip prefix-list PERMIT_DEFAULT seq 10 permit 0.0.0.0/0
+!
+route-map FILTER_OSPF_IN permit 10
+match ip address prefix-list PERMIT_DEFAULT
+!
+
+!
+!
+interface {{ staff_wan_interface }}
+ ip ospf network point-to-multipoint non-broadcast
+!
+interface {{ public_wan_interface }}
+ ip ospf network point-to-multipoint non-broadcast
+
+!
+router ospf 101 vrf public
+ router-id {{ public_rtr_id }}
+ auto-cost reference-bandwidth 1000000
+ capability vrf-lite
+ shutdown
+ area {{ public_area }}
+ passive-interface default
+ no passive-interface {{ public_wan_interface }}
+ neighbor {{ public_neighbor }}
+ neighbor {{ public_secondary_neighbor }} cost 8000
+ maximum-paths 1
+ network 9.9.9.9 0.0.0.255 area 101
+!
+router ospf 99
+ router-id {{ staff_rtr_id }}
+ auto-cost reference-bandwidth 1000000
+ shutdown
+ area {{ staff_area }}
+ passive-interface default
+ no passive-interface {{ staff_wan_interface }}
+ network 0.0.0.0 0.255.255.255 area {{ staff_area }}
+ neighbor {{ staff_neighbor }}
+ neighbor {{ staff_secondary_neighbor }} cost 8000
+ maximum-paths 1
+ distribute-list route-map FILTER_OSPF_IN in
+!
+!
+!
+
+!

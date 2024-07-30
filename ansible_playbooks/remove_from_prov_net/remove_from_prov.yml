@@ -1,0 +1,51 @@
+---
+- name: Create Ansible Hosts File
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+
+    - name: Generate Config Files
+      script: ./create_remove_from_prov.py
+      args:
+        executable: /usr/bin/python3.11
+
+
+    - name: Pause for 10 Seconds
+      pause:
+        seconds: 10
+
+- name: Refresh Ansible Inventory
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Trigger Inventory Refresh
+      meta: refresh_inventory
+
+- name: Push Base_Config to the Switches on the MAIN based off the CSV file info
+  hosts: MAIN
+  collections: arubanetworks.aoscx
+  gather_facts: no
+
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+  vars_files: /home/ansible/credentials.yml
+  
+  
+  tasks:
+
+    - name: Read Commands From File
+      shell: cat "{{ hostvars[inventory_hostname]['config_file'] }}"
+      register: config_file
+    
+    - name: config_line_by_line
+      aoscx_command:
+        commands: "{{ config_file.stdout_lines }}"
+
+    - name: see CLI output
+      debug:
+        var: cli_output

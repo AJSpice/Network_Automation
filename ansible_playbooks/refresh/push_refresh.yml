@@ -1,0 +1,37 @@
+---
+- name: Create Config Files and run Main Python script
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Run Main Python script
+      script: ./python_scripts/main.py
+      args:
+        executable: /usr/bin/python3.11
+
+    - name: Pause for 10 Seconds
+      pause:
+        seconds: 10
+
+- name: Refresh Ansible Inventory
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Trigger Inventory Refresh
+      meta: refresh_inventory
+
+
+- name: Import and run push_firmware_update playbook
+  import_playbook: ./playbooks/push_firmware_update.yml
+
+- name: Import and run push_vsf_config playbook
+  import_playbook: ./playbooks/push_vsf_config.yml
+  when: "'VSF_DEVICES' in group_names"  # Only run if in the VSF_DEVICES group
+
+- name: Import and run push_base_config playbook
+  import_playbook: ./playbooks/push_base_config.yml
+        
+
+        
+  

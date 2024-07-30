@@ -1,0 +1,76 @@
+---
+
+- name: Push VSF Config to the Conductor Switches on the MAIN based off the CSV file info
+  hosts: conductors
+  collections:
+    - arubanetworks.aoscx
+  gather_facts: no
+
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+  vars_files: /home/ansible/credentials.yml
+  
+  
+  tasks:
+
+    - name: Check if the host group is empty
+      debug:
+        msg: "Host group is empty, skipping tasks"
+      when: inventory_hostname not in groups['conductors']
+
+    - name: config vsf links
+      aoscx_config:
+        parents:
+          - vsf member 1
+        lines:
+          - link 1 {{ hostvars[inventory_hostname]['link_1'] }}
+          - link 2 {{ hostvars[inventory_hostname]['link_2'] }}
+
+    - name: set secondary member
+      aoscx_command:
+        commands:
+          - conf t
+          - vsf secondary-member {{ hostvars[inventory_hostname]['secondary_member'] }}
+
+
+########################################################################################################################################################################
+
+
+- name: Push VSF Config to the Member Switches on the MAIN based off the CSV file info
+  hosts: members
+  collections:
+    - arubanetworks.aoscx
+  gather_facts: no
+
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+  vars_files: /home/ansible/credentials.yml
+  
+  
+  tasks:
+
+    - name: Check if the host group is empty
+      debug:
+        msg: "Host group is empty, skipping tasks"
+      when: inventory_hostname not in groups['members']
+
+    - name: config vsf links
+      aoscx_config:
+        parents:
+          - vsf member 1
+        lines:
+          - link 1 {{ hostvars[inventory_hostname]['link_1'] }}
+          - link 2 {{ hostvars[inventory_hostname]['link_2'] }}
+
+    - name: vsf renumber to
+      aoscx_command:
+        commands:
+          - auto-confirm
+          - conf t
+          - vsf renumber-to {{ hostvars[inventory_hostname]['member_number'] }}

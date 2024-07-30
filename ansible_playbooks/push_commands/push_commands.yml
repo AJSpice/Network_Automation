@@ -1,0 +1,30 @@
+---
+- name: Push commands to the switch using CLI and txt file
+  hosts: MAIN
+  collections:
+    - arubanetworks.aoscx
+  gather_facts: no
+
+  vars:
+   ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+   ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+   ansible_user: "{{ ansible_tacacs_username }}" # reassign to new var
+   ansible_password: "{{ ansible_tacacs_password }}" # reassign to new var
+  vars_files: # path to encrypted credentials file
+   - /home/ansible/credentials.yml
+   
+  tasks:
+
+    - name: Read the CLI commands from the txt file
+      shell: cat ./commands.ios
+      register: command_file
+
+    - name: send cli commands
+      aoscx_command:
+        commands: "{{ command_file.stdout_lines }}"
+      register: cli_output
+
+    - name: see CLI output
+      debug:
+        var: cli_output
+...

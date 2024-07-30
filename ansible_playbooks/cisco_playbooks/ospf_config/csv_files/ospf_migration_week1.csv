@@ -1,0 +1,2 @@
+Hostname,IP Address,Staff Area #,Staff BDI,Public Area #,Public BDI,Staff WAN int,Public WAN int,Staff RTR ID,Public RTR ID,Primary_Staff_Neighbor,Secondary_Staff_Neighbor,Primary_Public_Neighbor,Secondary_Public_Neighbor
+SWT001,1.1.1.1,99,99,101,101,GigabitEthernet0/0/0.99,GigabitEthernet0/0/0.101,2.2.2.2,3.3.3.3,5.5.5.5,6.6.6.6,7.7.7.7,8.8.8.8

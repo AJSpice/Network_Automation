@@ -1,0 +1,47 @@
+---
+- name: Push Base_Config to the Switches on the MAIN based off the CSV file info
+  hosts: MAIN
+  collections: arubanetworks.aoscx
+  gather_facts: no
+
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+  vars_files: /home/ansible/credentials.yml
+  
+  
+  tasks:
+
+    - name: Read Commands From File
+      shell: cat "{{ hostvars[inventory_hostname]['config_file'] }}"
+      register: config_file
+    
+    - name: config_line_by_line
+      vars:
+          ansible_command_timeout: 600
+      aoscx_command:
+        commands: "{{ config_file.stdout_lines }}"
+
+    - name: Send Crypto Key Cert 
+      vars:
+        ansible_command_timeout: 300
+      aoscx_command:
+        commands:
+          - auto-confirm
+          - conf t
+          - crypto commands
+          - ta-certificate
+          - -----BEGIN CERTIFICATE-----
+          - cert content
+          - -----END CERTIFICATE-----
+          - END_OF_CERTIFICATE
+
+    - name: Copy Run Config from the Device
+      aoscx_config:
+        backup: True
+        backup_options:
+          filename: "{{ inventory_hostname }}_base_config.ios"
+          dir_path: ./config_files/applied_configs/
+        #save_when: changed
