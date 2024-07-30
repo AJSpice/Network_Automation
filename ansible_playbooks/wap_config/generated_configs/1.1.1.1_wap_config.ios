@@ -1,0 +1,22 @@
+!
+default int 1/1/30
+int 1/1/30    
+    description TEST_WAP
+    no routing
+    vlan trunk native 3
+    vlan trunk allowed all
+    qos trust dscp
+    rate-limit multicast 2000 kbps
+    exit
+!
+!
+default int 1/1/31
+int 1/1/31    
+    description TEST_WAP2
+    no routing
+    vlan trunk native 4
+    vlan trunk allowed all
+    qos trust dscp
+    rate-limit multicast 2000 kbps
+    exit
+!

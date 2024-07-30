@@ -1,0 +1,13 @@
+!
+conf t
+!
+job schedule_reboot_secondary
+10 cli boot system secondary
+!
+exit
+!
+schedule schedule_reboot_secondary
+job schedule_reboot_secondary
+trigger at 18:17 2024-06-19
+
+! 15:30 2024-02-12

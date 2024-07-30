@@ -1,0 +1,42 @@
+---
+  # name of the playbook
+
+
+- name: VERIFY SECONDARY IMAGE
+  hosts: MAIN
+  collections:
+    - arubanetworks.aoscx 
+
+  ##  
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ ansible_tacacs_username }}" # reassign to new var
+    ansible_password: "{{ ansible_tacacs_password }}" # reassign to new var
+    #
+    # the firmware update playbook needs to use paramiko ssh type
+    ansible_ssh_type: paramiko
+
+  vars_files: /home/ansible/credentials.yml
+
+  gather_facts: no
+
+  tasks:
+  
+    - name: Run The "sh images" CLI Command
+      vars:
+        ansible_command_timeout: 60
+      aoscx_command:
+        commands:
+          - sh images
+      register: sh_images_output
+
+    - name: Check if 10.10.1020 is in the Secondary Slot
+      debug:
+        msg: "{{ inventory_hostname }} is running 10.10.1020 on the secondary slot"
+      failed_when: 
+        - "'Version : FL.10.10.1020                 ' not in sh_images_output.stdout_lines | flatten"
+        - "'Version : PL.10.10.1020                 ' not in sh_images_output.stdout_lines | flatten"
+
+
+...

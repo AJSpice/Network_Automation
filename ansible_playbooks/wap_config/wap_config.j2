@@ -1,0 +1,11 @@
+!
+default int {{ switchport }}
+int {{ switchport }}    
+    description {{wap_name}}
+    no routing
+    vlan trunk native {{native_vlan}}
+    vlan trunk allowed all
+    qos trust dscp
+    rate-limit multicast 2000 kbps
+    exit
+!

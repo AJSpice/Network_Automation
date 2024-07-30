@@ -1,0 +1,63 @@
+!!!! PROV SWITCH !!!!
+conf t
+! Generated Configuration
+hostname {{switch_hostname}}
+!
+domain-name spicerack.com
+!
+banner motd !
+
+------------------------------------------------------------------------------------
+banner content
+------------------------------------------------------------------------------------  
+
+!
+user admin group administrators password ciphertext 1234
+user admin2 group administrators password 1234
+
+clock timezone america/los_angeles
+no ip icmp unreachable
+no ip icmp redirect
+ntp server {{gateway_ip}} iburst
+ntp enable
+cli-session
+    timeout 10
+!
+!
+ssh server vrf default
+!
+!
+client track ip
+vlan 1
+vlan {{mgmt_vlan}} 
+    name {{mgmt_vlan_name}}
+    client track ip 
+!
+spanning-tree mode mstp
+spanning-tree
+spanning-tree priority 8
+!
+qos trust dscp
+!
+interface vlan 1
+    shutdown
+    no ip dhcp
+interface vlan {{mgmt_vlan}} 
+    description {{mgmt_vlan_name}}
+    ip address {{mgmt_ip}}/{{mgmt_ip_cidr}}   
+!
+snmp-server vrf default
+snmp-server system-location {{system_location}}
+!
+ip route 0.0.0.0/0 {{gateway_ip}}
+!
+ip dns domain-name spicerack.com
+!
+!
+ip source-interface all interface vlan{{mgmt_vlan}}
+!
+https-server vrf default
+no https-server vrf mgmt
+
+
+ 

@@ -1,0 +1,57 @@
+---
+  # name of the playbook
+
+
+- name: VERIFY PRIMARY IMAGE
+  hosts: MAIN
+  collections:
+    - arubanetworks.aoscx 
+
+  ##  
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ ansible_tacacs_username }}" # reassign to new var
+    ansible_password: "{{ ansible_tacacs_password }}" # reassign to new var
+    
+    # the firmware update playbook needs to use paramiko ssh type
+    ansible_ssh_type: paramiko
+
+  vars_files: /home/ansible/credentials.yml
+
+  gather_facts: no
+
+  tasks:
+
+    - name: Remove The Reboot Jobs And Schedules
+      aoscx_config:
+        lines:
+          - no job schedule_reboot
+          - no schedule schedule_reboot
+          - no job schedule_reboot_secondary
+          - no schedule schedule_reboot_secondary
+          
+      register: remove_schedule_reboot_output
+  
+    - name: Run The "sh ver" CLI Command
+      vars:
+        ansible_command_timeout: 60
+      aoscx_command:
+        commands:
+          - sh ver
+      register: sh_ver_output
+
+    - name: Check Active Image
+      debug:
+        msg: "{{ inventory_hostname }} is running on the primary image"
+      failed_when: "'Active Image : primary                       ' not in sh_ver_output.stdout_lines | flatten"
+
+    - name: Check Primary Image Version
+      debug:
+        msg: "{{ inventory_hostname }} is running 10.13.1020 on the primary image"
+      failed_when: 
+        - "'Version      : FL.10.13.1020                                                 ' not in sh_ver_output.stdout_lines | flatten"
+        - "'Version      : PL.10.13.1020                                                 ' not in sh_ver_output.stdout_lines | flatten"
+
+
+...

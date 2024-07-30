@@ -1,0 +1,42 @@
+---
+  # name of the playbook
+- name: Push Network Commands
+
+  # target hosts for the playbook - will use hosts.yml in current dir if exists or /home/ansible/hosts.yml
+  hosts: lab_switch # change this to the hosts targeted using the hosts.yaml file in ~/
+  collections: # specifies the collections to be used in the playbook
+    - arubanetworks.aoscx # aruba network collection
+    - cisco.ios # cisco network collection
+
+  # section is for variables in a playbook
+  vars:
+   - ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+   - ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+   - ansible_user: "{{ ansible_tacacs_username }}" # reassign to new var
+   - ansible_password: "{{ ansible_tacacs_password }}" # reassign to new var
+  vars_files: # path to encrypted credentials file
+   - /home/ansible/credentials.yml
+
+  # dont gather facts on network devices, can set to "yes" if needed
+  gather_facts: no
+
+  # these are the tasks for the playbook
+  tasks:
+      # this runs a shell command on the local host
+    - name: do a linux command
+      shell: cat commands.txt
+      register: command_file
+
+      # run cli commands
+    - name: Run CLI Commands
+        # this module is part of the aoscx collection
+      aoscx_command:
+        commands: "sh vlan"
+        # assign the output of the command on this task to a variable "cli_output"
+      register: cli_output
+
+      # this displays the command output from the cli
+    - name: Display Command Output
+      debug:
+        var: cli_output.stdout_lines
+...

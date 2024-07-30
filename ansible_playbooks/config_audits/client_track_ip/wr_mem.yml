@@ -1,0 +1,35 @@
+---
+
+- name: Push commands to the switch using CLI and txt file
+  hosts: MAIN
+  collections:
+    - arubanetworks.aoscx
+  gather_facts: no
+
+  vars:
+   ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+   ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+   ansible_user: "{{ ansible_tacacs_username }}" # reassign to new var
+   ansible_password: "{{ ansible_tacacs_password }}" # reassign to new var
+  vars_files: # path to encrypted credentials file
+   - /home/ansible/credentials.yml
+   
+  tasks:
+
+    - name: Check the version of the network device
+      aoscx_command:
+        commands: sh ver
+      register: cli_output
+    
+    - name: Fail if not an Aruba device
+      fail:
+        msg: "{{ inventory_hostname }} is not an Aruba device"
+      when: "'ArubaOS-CX' not in cli_output.stdout_lines | flatten"
+
+    - name: Send CLI commands
+      aoscx_command:
+        commands:
+        - auto-confirm
+        - wr me
+
+...

@@ -1,0 +1,2 @@
+switch_hostname.old,switch_hostname,mgmt_vlan,mgmt_vlan_name,mgmt_ip,mgmt_ip_cidr,gateway_ip,system_location,prov_ip
+,SWT001,100,MANAGEMENT_VLAN,1.1.1.1,24,5.5.5.5,IDF,6.6.6.6

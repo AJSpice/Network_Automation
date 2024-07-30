@@ -1,0 +1,14 @@
+!
+conf t
+clock datetime 2024-07-09 19:12
+!
+job schedule_reboot
+10 cli boot system primary
+!
+exit
+!
+schedule schedule_reboot
+job schedule_reboot
+trigger at 19:14 2024-07-09
+
+! 15:30 2024-02-12

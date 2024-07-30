@@ -1,0 +1,225 @@
+---
+
+- name: PUSH 10.13.1020 TO PRIMARY
+
+  hosts: FIRMWARE_UPDATE
+  collections:
+    - arubanetworks.aoscx 
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+    # the firmware update playbook needs to use paramiko ssh type
+    ansible_ssh_type: paramiko
+  vars_files: /home/ansible/credentials.yml
+  gather_facts: no
+
+  tasks:
+      - name: Run The "allow unsafe updates" CLI Command
+        vars:
+          ansible_command_timeout: 120
+        aoscx_command:
+          commands:
+            - auto-confirm
+            - conf t
+            - allow-unsafe-updates 120
+
+        register: allow_unsafe_updates_cli_output
+
+      - name: Fail If "allow-unsafe-updates" Is Not Enabled
+        fail:
+          msg: "{{ inventory_hostname }} does not have allow-unsafe-updates enabled"
+        when: "'    Unsafe updates      : allowed (less than 120 minute(s) remaining)' not in allow_unsafe_updates_cli_output.stdout_lines | flatten"
+
+      - name: Copy TFTP For 6100 Models
+        vars:
+          ansible_command_timeout: 1000
+        aoscx_command:
+          commands:
+            - auto-confirm
+            - boot set-default primary
+            - copy tftp://5.5.5.5/{{ hostvars[inventory_hostname]['switch_model'] }}_10_13_1020.swi primary
+        when: hostvars[inventory_hostname]['switch_model'] == 6100
+
+      - name: Copy TFTP For 6300 Models
+        vars:
+          ansible_command_timeout: 1000
+        aoscx_command:
+          commands:
+            - auto-confirm
+            - boot set-default primary
+            - copy tftp://5.5.5.5/{{ hostvars[inventory_hostname]['switch_model'] }}_10_13_1020.swi primary vrf mgmt
+        when: hostvars[inventory_hostname]['switch_model'] == 6300
+      
+
+#########################################################################################################################################################
+
+- name: CREATE SCHEDULE REBOOT FILE
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    - name: Run Python Script To Create Schedule Reboot File
+      script: ../python_scripts/create_reboot.py
+      args:
+        executable: /usr/bin/python3.11
+
+#########################################################################################################################################################
+
+- name: READ AND PUSH THE REBOOT FILE TO THE SWITCHES
+
+  hosts: FIRMWARE_UPDATE
+  collections:
+    - arubanetworks.aoscx 
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+    # the firmware update playbook needs to use paramiko ssh type
+    ansible_ssh_type: paramiko
+  vars_files: /home/ansible/credentials.yml
+  gather_facts: no
+  tasks:
+
+      - name: Read The Schedule Reboot File
+        shell: cat "./config_files/generated_configs/schedule_reboot.ios"
+        register: command_file
+
+      - name: Send The Schedule Reboot Secondary File
+        aoscx_command:
+          commands: "{{ command_file.stdout_lines }}"
+        register: cli_output
+
+      - name: Wr Me
+        vars:
+          ansible_command_timeout: 120
+        aoscx_command:
+          commands:
+            - auto-confirm
+            - wr me
+
+#########################################################################################################################################################
+
+- name: WAIT FOR DEVICES TO COME BACK ONLINE
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Pause for 140 Seconds
+      pause:
+        seconds: 140
+
+    - name: Wait For Devices To Come Back Online
+      script: ../python_scripts/wait_for.py
+      args:
+        executable: /usr/bin/python3.11
+
+#########################################################################################################################################################
+
+- name: PUSH 10.10.1020 TO SECONDARY
+
+  hosts: FIRMWARE_UPDATE
+  collections:
+    - arubanetworks.aoscx 
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+    # the firmware update playbook needs to use paramiko ssh type
+    ansible_ssh_type: paramiko
+  vars_files: /home/ansible/credentials.yml
+  gather_facts: no
+
+  tasks:
+
+      - name: Copy TFTP For 6100 Models
+        vars:
+          ansible_command_timeout: 1000
+        aoscx_command:
+          commands:
+            - auto-confirm
+            - copy tftp://5.5.5.5/{{ hostvars[inventory_hostname]['switch_model'] }}_10_10_1020.swi secondary
+        when: hostvars[inventory_hostname]['switch_model'] == 6100
+
+      - name: Copy TFTP For 6300 Models
+        vars:
+          ansible_command_timeout: 1000
+        aoscx_command:
+          commands:
+            - auto-confirm
+            - copy tftp://5.5.5.5/{{ hostvars[inventory_hostname]['switch_model'] }}_10_10_1020.swi secondary vrf mgmt
+        when: hostvars[inventory_hostname]['switch_model'] == 6300
+      
+
+#########################################################################################################################################################
+
+- name: REMOVE THE SCHEDULES AND JOBS FROM SWITCHES AND VERIFY IMAGES
+  hosts: FIRMWARE_UPDATE
+  collections:
+    - arubanetworks.aoscx 
+  vars:
+    ansible_tacacs_username: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_user tacacs login
+    ansible_tacacs_password: "{{ lookup('file', '/home/ansible/credentials.yml') | from_yaml }}" # used to find the ansible_password tacacs login
+    ansible_user: "{{ local_admin_username }}" # reassign to new var
+    ansible_password: "{{ local_admin_password }}" # reassign to new var
+    # the firmware update playbook needs to use paramiko ssh type
+    ansible_ssh_type: paramiko
+  vars_files: /home/ansible/credentials.yml
+  gather_facts: no
+
+  tasks:
+
+  - name: Wr Me
+    vars:
+      ansible_command_timeout: 120
+    aoscx_command:
+      commands:
+        - auto-confirm
+        - wr me
+
+  - name: Remove the Schedule Reboot And Job Reboot From Switches
+    aoscx_command:
+      commands:
+        - conf t
+        - no job schedule_reboot
+        - no schedule schedule_reboot
+
+  - name: Run The "sh ver" CLI Command
+    vars:
+      ansible_command_timeout: 120
+    aoscx_command:
+      commands:
+        - sh ver
+    register: sh_ver_output
+
+  - name: Check Active Image
+    debug:
+      msg: "{{ inventory_hostname }} is running on the primary image"
+    failed_when: "'Active Image : primary                       ' not in sh_ver_output.stdout_lines | flatten"
+
+  - name: Check Primary Image Version
+    debug:
+      msg: "{{ inventory_hostname }} is running 10.13.1020 on the primary image"
+    failed_when: 
+      - "'Version      : FL.10.13.1020                                                 ' not in sh_ver_output.stdout_lines | flatten"
+      - "'Version      : PL.10.13.1020                                                 ' not in sh_ver_output.stdout_lines | flatten"
+
+  - name: Run The "sh images" CLI Command
+    vars:
+      ansible_command_timeout: 120
+    aoscx_command:
+      commands:
+        - sh images
+    register: sh_images_output
+
+  - name: Check If 10.10.1020 Is In The Secondary Slot
+    debug:
+      msg: "{{ inventory_hostname }} is running 10.10.1020 on the secondary slot"
+    failed_when: 
+      - "'Version : FL.10.10.1020                 ' not in sh_images_output.stdout_lines | flatten"
+      - "'Version : PL.10.10.1020                 ' not in sh_images_output.stdout_lines | flatten"
+...
